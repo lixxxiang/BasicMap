@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>My Cesium App</title>
+    <script src="Cesium/Cesium.js"></script>
+    <link rel="stylesheet" href="http://cdn.bootcss.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/daterangepicker-bs3.css">
+    <link rel="stylesheet" href="css/bootstrap-toggle.min.css">
+    <link rel="stylesheet" href="css/buttons.css">
+    <link rel="stylesheet" href="css/bootstrap-slider.min.css">
+    <link href="http://cdn.bootcss.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="http://hovertree.com/texiao/bootstrap/4/css/city-picker.css" rel="stylesheet" type="text/css"/>
+    <link rel="stylesheet" href="css/jquery.webui-popover.min.css">
+    <link title="timeline-styles" rel="stylesheet" href="css/timeline.css">
+    <script src="https://cdn.static.runoob.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.static.runoob.com/libs/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <link href="http://cdn.static.runoob.com/libs/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <script src="cordova.js"></script>
+    <style>
+        @import url(http://10.10.90.6/Cesium/Build/Cesium/Widgets/widgets.css);
+
+        html, body, #cesiumContainer {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .cesium-widget-credits {
+            display: none;
+        }
+
+        .cesium-viewer .cesium-widget-credits {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div id="cesiumContainer"/>
+<script>
+    var tdtImageProvider = new Cesium.WebMapTileServiceImageryProvider({
+        url: 'http://t4.tianditu.com/img_c/wmts?',
+        layer: 'img',
+        style: 'default',
+        format: 'tiles',
+        tileMatrixSetID: 'c',
+        maximumlevel: 18,
+        alpha: 1.0,
+        show: true,
+        tilingScheme: new Cesium.GeographicTilingScheme(),
+        tileMatrixLabels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18']
+    });
+
+    var tdtProvider1 = new Cesium.WebMapTileServiceImageryProvider({
+        url: 'http://t4.tianditu.com/vec_c/wmts?',
+        layer: 'vec',
+        style: 'default',
+        format: 'tiles',
+        tileMatrixSetID: 'c',
+        maximumlevel: 18,
+        alpha: 1.0,
+        show: true,
+        tilingScheme: new Cesium.GeographicTilingScheme(),
+        tileMatrixLabels: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18']
+    });
+    var osmProvider = new Cesium.createOpenStreetMapImageryProvider({
+        url: 'https://a.tile.openstreetmap.org/'
+    });
+    var instantProvider = tdtImageProvider;
+
+
+    Cesium.BingMapsApi.defaultKey = '5Vv41lJmAZXWbGIzEOr5~hRdyprq3YjnMm149t4PS5Q~AoyOxzxOxDEMLfugZcp_GC9JDW0nSH-gm4-xYM5erL0lkoMJTAM5hk6UBRoKrSWK';
+
+    var viewer = new Cesium.Viewer('cesiumContainer',
+        {
+            imageryProvider: instantProvider,
+            animation: false,
+            timeline: false,
+            fullscreenButton: false,
+            geocoder: false,
+            selectionIndicator: false,
+            navigationInstructionsInitiallyVisible: false,
+            baseLayerPicker: false,
+            homeButton: false,
+            navigationHelpButton: false,
+            sceneModePicker: false,
+        });
+
+    var camera = viewer.scene.camera;
+    ff();
+    function ff() {
+        camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(108.9, 34.267, 20000000)
+        });
+    }
+
+    var success = function () {
+    };
+    var fail = function () {
+    };
+
+    function backHome() {
+        camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(108.9, 34.267, 20000000)
+        });
+    }
+    function moveQuick() {
+        camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(125.4389730000, 43.8113390000, 1000000)
+        });
+    }
+
+    function compass(content) {
+        var camera = viewer.scene.camera;
+        var position = camera.position;
+        camera.flyTo({
+            destination: position
+        });
+    }
+
+
+    function selectLayers(content) {
+        var temp = content;
+        if (temp == 0) {
+            addAdditionalLayerOption("tianying", tdtImageProvider, 1);
+            InitialZhuantiLayers(viewer, initialurl);
+            layers = [];
+            var i = getIndex();
+            viewer.imageryLayers.remove(viewer.imageryLayers.get(i - 2));
+        } else if (temp == 1) {
+            addAdditionalLayerOption("tianquan", tdtProvider1, 1);
+            InitialZhuantiLayers(viewer, initialurl);
+            layers = [];
+            var j = getIndex();
+            viewer.imageryLayers.remove(viewer.imageryLayers.get(j - 2));
+        } else if (temp == 2) {
+            addAdditionalLayerOption("osm", osmProvider, 1);
+            InitialZhuantiLayers(viewer, initialurl);
+            layers = [];
+            var k = getIndex();
+            viewer.imageryLayers.remove(viewer.imageryLayers.get(k - 2));
+        }
+    }
+    var index = 0;
+    function getIndex() {
+        index = index + 1;
+        return index;
+    }
+    function setLocation(location) {
+        var array = location.split(",");
+        camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(array[1], array[0], 200000)
+        });
+    }
+    function compass(content) {
+        var camera = viewer.scene.camera;
+        var position = camera.position;
+        camera.flyTo({
+            destination: position
+        });
+    }
+
+    var imageryLayers = viewer.imageryLayers;
+    var curWwwPath = "http://10.10.90.6:8089/";
+    var initialurl = curWwwPath + 'GetInitialLayers.ashx';
+    var data = {xmlname: "LayersCollection"};
+    InitialZhuantiLayers(viewer, initialurl);
+    var layers = [];
+    function InitialZhuantiLayers(viewer, initialurl) {
+        $.ajax({
+            url: initialurl,
+            async: true,
+            data: data,
+            success: function (result) {
+                $.each(result.layers, function (index, layer) {
+                    $.each(layer, function (key, value) {
+                        var scheme,currenturl;
+                        if (value.coordinate=="c") {
+                            scheme = new Cesium.GeographicTilingScheme();
+                            currenturl = curWwwPath + value.urlSource + ".ashx?params={z}/{x}/{y}/";
+                        } else {
+                            scheme = new Cesium.WebMercatorTilingScheme({
+                                ellipsoid: Cesium.Ellipsoid.WGS84,
+                                rectangleSouthwestInMeters: new Cesium.Cartesian2(-20037508.34, -20037508.34),
+                                rectangleNortheastInMeters: new Cesium.Cartesian2(20037508.34, 20037508.34)
+                            });
+                            currenturl = curWwwPath + value.urlSource + ".ashx?params={z}/{x}/{reverseY}/";
+                        }
+
+                        var region = value.region.split(",");
+                        var rectangle = Cesium.Rectangle.fromDegrees(region[0], region[1], region[2], region[3]);
+                        var currentProvider = new Cesium.UrlTemplateImageryProvider({
+                            url: currenturl,
+                            credit: value.credit,
+                            tilingScheme: scheme,
+                            maximumLevel: value.maxlevel,
+                            rectangle: rectangle
+                        });
+                        layerTemp = addAdditionalLayerOption(value.name, currentProvider, 1);
+                        layerTemp.show = false;
+                        layers.push(layerTemp);
+                    })
+                });
+                selectMap('-1');
+            },
+            error: function (e) {
+                alert("error:" + e);
+            }
+        });
+    }
+    /**
+     * show and hide
+     * @type {string}
+     */
+
+    Array.prototype.indexOf = function (val) {
+        for (var i = 0; i < this.length; i++) {
+            if (this[i] == val) return i;
+        }
+        return -1;
+    };
+    Array.prototype.remove = function (val) {
+        var index = this.indexOf(val);
+        if (index > -1) {
+            this.splice(index, 1);
+        }
+    };
+
+    var inputLayers = [];
+
+    function selectMap(content) {
+        var temp = content;
+        var len = inputLayers.length;
+        for (var i in inputLayers) {
+            if (i == temp) {
+                inputLayers.remove(i);
+                hideLayer(layers[i]);
+            }
+        }
+        if (inputLayers.length == len) {
+            inputLayers.push(temp);
+            showLayer(layers[temp]);
+        }
+    }
+
+    var layerid;
+
+    function selectLayer(layerId) {
+        layerid = layerId;
+    }
+
+    function seekBar(progress) {
+        for (var i = 0; i < inputLayers.length; i++)
+            if (inputLayers[i] >= 0)
+                layers[inputLayers[i]].alpha = progress / 100;
+    }
+    function showLayer(layerToshow) {
+        layerToshow.show = true;
+    }
+    function hideLayer(layerToshow) {
+        layerToshow.show = false;
+    }
+    function addAdditionalLayerOption(name, imageryProvider, alpha, show) {
+        var layer = imageryLayers.addImageryProvider(imageryProvider);
+        layer.alpha = Cesium.defaultValue(alpha, 1);
+        layer.show = Cesium.defaultValue(show, true);
+        layer.name = name;
+        return layer;
+    }
+
+
+    var czmldataSourcepromise = Cesium.CzmlDataSource.load(curWwwPath+"geojson/Scenario1.czml");
+    var visiable = 0;
+    function satellite() {
+        if(visiable == 0){
+            czmldataSourcepromise.then(function(datasource) {
+                viewer.dataSources.add(datasource);
+            });
+            visiable = 1;
+        }else if(visiable == 1){
+            czmldataSourcepromise.then(function(datasource) {
+                viewer.dataSources.remove(datasource);
+            });
+            visiable = 0;
+        }
+    }
+</script>
+</body>
+</html>
