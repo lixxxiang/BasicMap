@@ -3,12 +3,11 @@ package com.example.lixiang.basic2;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.content.DialogInterface;
-import android.content.Intent;
+import android.app.DownloadManager;
+import android.content.*;
 import android.content.pm.PackageManager;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.CountDownTimer;
+import android.net.Uri;
+import android.os.*;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
@@ -25,14 +24,28 @@ import android.widget.*;
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
 import baidu.location.service.LocationService;
+import com.example.lixiang.basic2.guide.guideActivity;
+import com.google.gson.*;
 import org.apache.cordova.*;
 import org.apache.cordova.engine.SystemWebView;
 import org.apache.cordova.engine.SystemWebViewEngine;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import tourguide.tourguide.TourGuide;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+//
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, CordovaInterface, SeekBar.OnSeekBarChangeListener {
 
@@ -48,6 +61,9 @@ public class MainActivity extends AppCompatActivity
     private AlertDialog.Builder builder;
     private AlertDialog.Builder industry;
     private AlertDialog.Builder mapDialog;
+    private AlertDialog.Builder videoDialog;
+    private AlertDialog.Builder chooseDialog;
+    private AlertDialog.Builder playDialog;
     public final static int CODE = 1;
     private SlidingDrawer slidingDrawer;
     private LinearLayout linearLayout;
@@ -68,6 +84,7 @@ public class MainActivity extends AppCompatActivity
     private CoordinatorLayout container;
     private Button map;
     private boolean[] showMap;
+    private boolean[] showVideo;
     private SeekBar transparent;
     public Activity mActivity;
     private CompoundButton nav_cameraButton;
@@ -75,6 +92,11 @@ public class MainActivity extends AppCompatActivity
     private CompoundButton nav_slideshowButton;
     private ImageView iv = null;
     private Button satellite;
+    private String[] credit;
+    private String[] videoName;
+    private String[] videoUrl;
+    private DownloadManager downManager;
+    private BroadcastReceiver broadcastReceiver;
 
     private CountDownTimer timer = new CountDownTimer(8000, 1000) {
 
@@ -100,12 +122,55 @@ public class MainActivity extends AppCompatActivity
 
         mActivity = this;
         setContentView(R.layout.activity_main);
+        StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads().detectDiskWrites().detectNetwork()
+                .penaltyLog().build());
+        StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+                .detectLeakedSqlLiteObjects().detectLeakedClosableObjects()
+                .penaltyLog().penaltyDeath().build());
         container = (CoordinatorLayout) findViewById(R.id.coordinator);
         getPersimmions();
         mInflater = LayoutInflater.from(this);
-        showMap = new boolean[]{false, false, false};
 
-        industries = new String[]{"国土资源部", "环境保护部", "农业部", "住房和城乡建设部", "交通运输部", "国家林业局", "民政部", "中国地震局", "水利部", "国家统计局"};
+
+        JsonObject obj = new JsonParser().parse(loadJson("http://10.10.90.6:8080/GetInitialLayers.do?xmlname=LayersCollection")).getAsJsonObject();
+        JsonArray jsonArray = obj.get("layers").getAsJsonObject().get("layer").getAsJsonArray();
+        int index = 0;
+        credit = new String[jsonArray.size()];
+        for (JsonElement jsonElement : jsonArray) {
+            credit[index] = jsonElement.getAsJsonObject().get("credit").getAsString();
+            index++;
+        }
+        showMap = new boolean[jsonArray.size()];
+        for (int k = 0; k < showMap.length; k++)
+            showMap[k] = false;
+
+
+        JsonObject obj2 = new JsonParser().parse(loadJson("http://10.10.90.6:8080/GetVideoList.do")).getAsJsonObject();
+        JsonArray j2 = obj2.get("videos").getAsJsonObject().get("video").getAsJsonArray();
+        int index2 = 0;
+        videoName = new String[j2.size()];
+        videoUrl = new String[j2.size()];
+        for (JsonElement jsonElement2 : j2) {
+            videoName[index2] = jsonElement2.getAsJsonObject().get("name").getAsString();
+            videoUrl[index2] = "http://10.10.90.6:8080" + jsonElement2.getAsJsonObject().get("src").getAsString();
+            index2++;
+        }
+
+
+
+        industries = new String[]{
+                "国土资源部",
+                "环境保护部",
+                "农业部",
+                "住房和城乡建设部",
+                "交通运输部",
+                "国家林业局",
+                "民政部",
+                "中国地震局",
+                "水利部",
+                "国家统计局"
+        };
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         transparent = (SeekBar) findViewById(R.id.transparent);
         transparent.setOnSeekBarChangeListener(this);
@@ -118,7 +183,6 @@ public class MainActivity extends AppCompatActivity
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
                     case R.id.home:
-
                         systemWebView.loadUrl("javascript:backHome()");
                         break;
 
@@ -148,7 +212,7 @@ public class MainActivity extends AppCompatActivity
         map.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                showMapDialog();
+                chooseMapOrVideo();
             }
         });
 
@@ -186,34 +250,157 @@ public class MainActivity extends AppCompatActivity
         nav_cameraButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if (b)
-                    nav_cameraButton.setClickable(false);
+                if (b) nav_cameraButton.setClickable(false);
             }
         });
 
         nav_galleryButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if (b)
-                    nav_galleryButton.setClickable(false);
+                if (b) nav_galleryButton.setClickable(false);
             }
         });
 
         nav_slideshowButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if (b)
-                    nav_slideshowButton.setClickable(false);
+                if (b) nav_slideshowButton.setClickable(false);
             }
         });
     }
 
+    private void chooseMapOrVideo() {
+        chooseDialog = new AlertDialog.Builder(this);
+        chooseDialog.setMessage("您要浏览的种类是：");
+        chooseDialog.setPositiveButton("图层信息", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                showMapDialog();
+
+            }
+        });
+        chooseDialog.setNegativeButton("视频信息", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                showVideoDialog();
+            }
+        });
+        chooseDialog.setCancelable(true);
+        AlertDialog dialog = chooseDialog.create();
+        Window window = dialog.getWindow();
+        WindowManager.LayoutParams lp = window.getAttributes();
+        window.setAttributes(lp);
+        dialog.show();
+    }
+
+    public void showPlayDialog(int index) {
+        Log.e("sdfsdf", String.valueOf(index));
+        final String videourl = videoUrl[index];
+        final String videoname = videoName[index];
+        playDialog = new AlertDialog.Builder(this);
+        playDialog.setMessage("是否立刻播放视频？");
+        playDialog.setPositiveButton("是", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                downloadVideo(videourl, videoname);
+            }
+        });
+        playDialog.setNegativeButton("否", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+            }
+        });
+        playDialog.setCancelable(true);
+        AlertDialog dialog = playDialog.create();
+        Window window = dialog.getWindow();
+        WindowManager.LayoutParams lp = window.getAttributes();
+        window.setAttributes(lp);
+        dialog.show();
+    }
+
+    long id;
+
+    private void downloadVideo(String videoUrl, final String videoname) {
+        /*
+
+        假装在加载
+         */
+        String[] strings = videoUrl.split("/");
+        final String fileName = strings[strings.length - 1];
+        Toast.makeText(getApplicationContext(), "视频 \"" + videoname + "\" 正在缓冲，请等待...", Toast.LENGTH_LONG).show();
+        /*
+
+        开始偷偷下载
+         */
+        downManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(videoUrl));
+        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI);
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+        request.setAllowedOverRoaming(false);
+
+        request.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName);
+        id = downManager.enqueue(request);
+        /*
+        监听是否偷偷下载完成
+
+        */
+        IntentFilter intentFilter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        broadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                long ID = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                if (ID == id)
+                    Toast.makeText(getApplicationContext(), "视频 \"" + videoname + " \"缓冲完成", Toast.LENGTH_SHORT).show();
+                Intent intent2 = new Intent(Intent.ACTION_VIEW);
+                intent2.setDataAndType(Uri.parse(Environment.getExternalStorageDirectory().getPath()
+                        + "/Android/data/"
+                        + MainActivity.this.getPackageName()
+                        + "/files/"
+                        + Environment.DIRECTORY_DOWNLOADS
+                        + "/"
+                        + fileName), "video/mp4");
+                startActivity(intent2);
+            }
+        };
+        registerReceiver(broadcastReceiver, intentFilter);
+    }
+
+    public void showVideoDialog() {
+        final int[] index = {-1};
+        videoDialog = new AlertDialog.Builder(this);
+        videoDialog.setTitle("请选择视频：");
+
+        videoDialog.setSingleChoiceItems(videoName, -1, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                transparent.setVisibility(View.VISIBLE);
+                systemWebView.loadUrl("javascript:selectVideo(\"" + i + "\")");
+                index[0] = i;
+            }
+        });
+        videoDialog.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                showPlayDialog(index[0]);
+            }
+        });
+        videoDialog.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+            }
+        });
+        videoDialog.setCancelable(true);
+        AlertDialog dialog = videoDialog.create();
+        Window window = dialog.getWindow();
+        WindowManager.LayoutParams lp = window.getAttributes();
+        window.setAttributes(lp);
+        dialog.show();
+    }
 
     public void showMapDialog() {
         mapDialog = new AlertDialog.Builder(this);
         mapDialog.setTitle("请选择图层：");
-        final String[] items = {"冬日长春图层", "城市宜居指数图层", "农业图层"};
-        mapDialog.setMultiChoiceItems(items, showMap, new DialogInterface.OnMultiChoiceClickListener() {
+        mapDialog.setMultiChoiceItems(credit, showMap, new DialogInterface.OnMultiChoiceClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i, boolean b) {
                 transparent.setVisibility(View.VISIBLE);
@@ -221,12 +408,7 @@ public class MainActivity extends AppCompatActivity
                 systemWebView.loadUrl("javascript:selectMap(\"" + i + "\")");
             }
         });
-        mapDialog.setPositiveButton("快速定位到图层位置", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                systemWebView.loadUrl("javascript:moveQuick(\"0\")");
-            }
-        });
+
         mapDialog.setNegativeButton("取消", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -400,8 +582,6 @@ public class MainActivity extends AppCompatActivity
             Bundle bundle = data.getExtras();
             final String userName = bundle.getString("userName");
             Log.e("---username----", userName);
-
-
             systemWebView.loadUrl("javascript:showAlert(\"" + userName + "\")");
 
         }
@@ -491,7 +671,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private BDLocationListener mListener = new BDLocationListener() {
-
         @Override
         public void onReceiveLocation(BDLocation location) {
             // TODO Auto-generated method stub
@@ -514,5 +693,26 @@ public class MainActivity extends AppCompatActivity
 
     public void logMsg(String str) {
         Log.e("LOCATION", str);
+    }
+
+    public static String loadJson(String url) {
+        StringBuilder json = new StringBuilder();
+        try {
+            URL urlObject = new URL(url);
+            URLConnection uc = urlObject.openConnection();
+            BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream(), "utf-8"));
+
+            String inputLine = null;
+            while ((inputLine = in.readLine()) != null) {
+                json.append(inputLine);
+            }
+            in.close();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //String arr=new String(json.toString().getBytes("iso8859-1"),"utf-8");
+        return json.toString();
     }
 }

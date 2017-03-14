@@ -4,13 +4,13 @@
 >
     <item android:id="@+id/home"
           android:title="home"
-          android:icon="@drawable/home"
+          android:icon="@drawable/homee"
           android:orderInCategory="90"
           app:showAsAction="ifRoom"
           />
     <item
             android:id="@+id/locate"
-            android:icon="@drawable/ic_menu_mylocation"
+            android:icon="@drawable/locate"
             android:orderInCategory="90"
             android:title="locate"
             app:showAsAction="ifRoom"
@@ -18,7 +18,7 @@
 
     <item
             android:id="@+id/share"
-            android:icon="@drawable/abc_ic_menu_share_material_dark"
+            android:icon="@drawable/share"
             android:orderInCategory="90"
             android:title="share"
             app:showAsAction="ifRoom"

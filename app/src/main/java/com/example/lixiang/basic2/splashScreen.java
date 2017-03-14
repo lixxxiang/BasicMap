@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.WindowManager;
+import com.example.lixiang.basic2.guide.guideActivity;
 
 
 public class splashScreen extends Activity {

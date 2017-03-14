@@ -8,9 +8,15 @@ import org.json.JSONException;
 
 public class CallBack extends CordovaPlugin {
 
+    public static String url = "";
+    public static String credits = "";
+
 
     public void speak(String content) {
-        Log.e("url", content);
+        Log.e("url---------", content);
+
+        url = content;
+
     }
 
     @Override

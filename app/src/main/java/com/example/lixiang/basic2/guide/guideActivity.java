@@ -1,4 +1,4 @@
-package com.example.lixiang.basic2;
+package com.example.lixiang.basic2.guide;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -10,6 +10,7 @@ import android.view.Window;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.Button;
+import com.example.lixiang.basic2.R;
 import tourguide.tourguide.Overlay;
 import tourguide.tourguide.Pointer;
 import tourguide.tourguide.ToolTip;
