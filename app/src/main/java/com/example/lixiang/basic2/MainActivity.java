@@ -174,6 +174,7 @@ public class MainActivity extends AppCompatActivity
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         transparent = (SeekBar) findViewById(R.id.transparent);
         transparent.setOnSeekBarChangeListener(this);
+        transparent.setVisibility(View.INVISIBLE);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowTitleEnabled(false);
@@ -184,6 +185,7 @@ public class MainActivity extends AppCompatActivity
                 switch (item.getItemId()) {
                     case R.id.home:
                         systemWebView.loadUrl("javascript:backHome()");
+                        transparent.setVisibility(View.INVISIBLE);
                         break;
 
                     case R.id.share:
@@ -406,6 +408,7 @@ public class MainActivity extends AppCompatActivity
                 transparent.setVisibility(View.VISIBLE);
                 showMap[i] = b;
                 systemWebView.loadUrl("javascript:selectMap(\"" + i + "\")");
+                transparent.setVisibility(View.VISIBLE);
             }
         });
 
